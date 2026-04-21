@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analytics Dashboard - Laptop Recommendation System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .gradient-bg {
+            background: linear-gradient(135deg, #1e3a8a 0%, #3730a3 50%, #4c1d95 100%);
+        }
+        .stat-card {
+            transition: all 0.3s ease;
+        }
+        .stat-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        .chart-container {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            margin-bottom: 24px;
+        }
+        .loading-spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #1e3a8a;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Flower Petals Animation */
+        .petals-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            overflow: hidden;
+            z-index: 1;
+        }
+
+        .petal {
+            position: absolute;
+            width: 25px;
+            height: 25px;
+            background: linear-gradient(45deg, #ff69b4, #ffb6c1, #ffc0cb, #ff1493);
+            border-radius: 0 100% 0 100%;
+            opacity: 0.8;
+            animation: fall linear infinite;
+        }
+
+        .petal:nth-child(odd) {
+            background: linear-gradient(45deg, #ff69b4, #ffb6c1);
+            width: 20px;
+            height: 20px;
+        }
+
+        .petal:nth-child(even) {
+            background: linear-gradient(45deg, #ffc0cb, #ff1493);
+            width: 30px;
+            height: 30px;
+        }
+
+        .petal:nth-child(3n) {
+            background: linear-gradient(45deg, #ff69b4, #ff1493);
+            width: 18px;
+            height: 18px;
+        }
+
+        @keyframes fall {
+            0% {
+                transform: translateY(-100vh) rotate(0deg);
+                opacity: 0;
+            }
+            10% {
+                opacity: 0.8;
+            }
+            90% {
+                opacity: 0.8;
+            }
+            100% {
+                transform: translateY(100vh) rotate(360deg);
+                opacity: 0;
+            }
+        }
+
+        @keyframes sway {
+            0%, 100% {
+                transform: translateX(0);
+            }
+            50% {
+                transform: translateX(30px);
+            }
+        }
+
+        .petal {
+            animation: fall var(--fall-duration) linear infinite, sway var(--sway-duration) ease-in-out infinite;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Flower Petals Animation -->
+    <div class="petals-container" id="petalsContainer"></div>
+    
+    <!-- Header -->
+    <header class="gradient-bg text-white shadow-lg">
+        <div class="container mx-auto px-4 py-6">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <i class="fas fa-chart-line text-3xl"></i>
+                    <h1 class="text-2xl font-bold">Analytics Dashboard</h1>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <span class="text-sm opacity-90">Real-time Insights</span>
+                    <i class="fas fa-analytics text-xl"></i>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navigation -->
+    <nav class="bg-white shadow-md sticky top-0 z-40">
+        <div class="container mx-auto px-4">
+            <div class="flex space-x-8">
+                <a href="/" class="py-4 px-6 text-sm font-medium text-gray-700 hover:text-blue-600 border-b-3 border-transparent">
+                    <i class="fas fa-laptop mr-2"></i>
+                    Back to Recommendations
+                </a>
+                <a href="/analytics" class="py-4 px-6 text-sm font-medium text-blue-600 border-b-3 border-blue-600">
+                    <i class="fas fa-chart-bar mr-2"></i>
+                    Analytics
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-8">
+        <!-- Loading State -->
+        <div id="loadingState" class="flex flex-col items-center justify-center py-12">
+            <div class="loading-spinner mb-4"></div>
+            <p class="text-gray-600 font-medium">Loading analytics...</p>
+        </div>
+
+        <!-- Analytics Content -->
+        <div id="analyticsContent" class="hidden">
+            <!-- Summary Cards -->
+            <section class="mb-8">
+                <h2 class="text-2xl font-bold mb-6 text-gray-800">
+                    <i class="fas fa-tachometer-alt text-blue-600 mr-2"></i>
+                    Key Metrics
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" id="summaryCards">
+                    <!-- Summary cards will be inserted here -->
+                </div>
+            </section>
+
+            <!-- Sales Metrics -->
+            <section class="mb-8">
+                <h2 class="text-2xl font-bold mb-6 text-gray-800">
+                    <i class="fas fa-chart-line text-green-600 mr-2"></i>
+                    Sales Performance
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" id="salesCards">
+                    <!-- Sales cards will be inserted here -->
+                </div>
+            </section>
+
+            <!-- Charts Grid -->
+            <section class="mb-8">
+                <h2 class="text-2xl font-bold mb-6 text-gray-800">
+                    <i class="fas fa-chart-line text-blue-600 mr-2"></i>
+                    Visual Analytics
+                </h2>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Sales Trend Chart -->
+                    <div class="chart-container lg:col-span-2">
+                        <h3 class="text-lg font-semibold mb-4 text-gray-700">
+                            <i class="fas fa-chart-line text-green-500 mr-2"></i>
+                            Sales Trends - Monthly Analysis
+                        </h3>
+                        <div id="salesTrend" class="h-96"></div>
+                    </div>
+
+                    <!-- Brand Sales Comparison -->
+                    <div class="chart-container">
+                        <h3 class="text-lg font-semibold mb-4 text-gray-700">
+                            <i class="fas fa-industry text-blue-500 mr-2"></i>
+                            Brand Sales Performance
+                        </h3>
+                        <div id="brandSalesComparison" class="h-96"></div>
+                    </div>
+
+                    <!-- Use Case Sales Trends -->
+                    <div class="chart-container">
+                        <h3 class="text-lg font-semibold mb-4 text-gray-700">
+                            <i class="fas fa-users text-purple-500 mr-2"></i>
+                            Sales by Use Case
+                        </h3>
+                        <div id="useCaseSalesTrend" class="h-96"></div>
+                    </div>
+
+                    <!-- Price Segment Sales -->
+                    <div class="chart-container">
+                        <h3 class="text-lg font-semibold mb-4 text-gray-700">
+                            <i class="fas fa-dollar-sign text-green-500 mr-2"></i>
+                            Price Segment Analysis
+                        </h3>
+                        <div id="priceSegmentSales" class="h-96"></div>
+                    </div>
+
+                    <!-- Performance Radar Chart -->
+                    <div class="chart-container">
+                        <h3 class="text-lg font-semibold mb-4 text-gray-700">
+                            <i class="fas fa-spider text-blue-500 mr-2"></i>
+                            Performance Comparison
+                        </h3>
+                        <div id="performanceRadar" class="h-96"></div>
+                    </div>
+
+                    <!-- Price Distribution -->
+                    <div class="chart-container">
+                        <h3 class="text-lg font-semibold mb-4 text-gray-700">
+                            <i class="fas fa-dollar-sign text-green-500 mr-2"></i>
+                            Price Distribution
+                        </h3>
+                        <div id="priceDistribution" class="h-96"></div>
+                    </div>
+
+                    <!-- Performance vs Price Scatter -->
+                    <div class="chart-container">
+                        <h3 class="text-lg font-semibold mb-4 text-gray-700">
+                            <i class="fas fa-scatter-chart text-purple-500 mr-2"></i>
+                            Performance vs Price
+                        </h3>
+                        <div id="performanceVsPrice" class="h-96"></div>
+                    </div>
+
+                    <!-- Use Case Distribution -->
+                    <div class="chart-container">
+                        <h3 class="text-lg font-semibold mb-4 text-gray-700">
+                            <i class="fas fa-pie-chart text-orange-500 mr-2"></i>
+                            Use Case Distribution
+                        </h3>
+                        <div id="useCaseDistribution" class="h-96"></div>
+                    </div>
+
+                    <!-- Brand Comparison -->
+                    <div class="chart-container">
+                        <h3 class="text-lg font-semibold mb-4 text-gray-700">
+                            <i class="fas fa-industry text-red-500 mr-2"></i>
+                            Brand Comparison
+                        </h3>
+                        <div id="brandComparison" class="h-96"></div>
+                    </div>
+
+                    <!-- Specification Heatmap -->
+                    <div class="chart-container">
+                        <h3 class="text-lg font-semibold mb-4 text-gray-700">
+                            <i class="fas fa-th text-teal-500 mr-2"></i>
+                            Specification Heatmap
+                        </h3>
+                        <div id="specificationHeatmap" class="h-96"></div>
+                    </div>
+
+                    <!-- Market Segment Analysis -->
+                    <div class="chart-container">
+                        <h3 class="text-lg font-semibold mb-4 text-gray-700">
+                            <i class="fas fa-chart-bar text-indigo-500 mr-2"></i>
+                            Market Segment Analysis
+                        </h3>
+                        <div id="marketSegmentAnalysis" class="h-96"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Detailed Statistics -->
+            <section class="mb-8">
+                <h2 class="text-2xl font-bold mb-6 text-gray-800">
+                    <i class="fas fa-info-circle text-blue-600 mr-2"></i>
+                    Detailed Statistics
+                </h2>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="chart-container">
+                        <h3 class="text-lg font-semibold mb-4 text-gray-700">
+                            <i class="fas fa-trophy text-yellow-500 mr-2"></i>
+                            Top Performers
+                        </h3>
+                        <div id="topPerformers" class="space-y-3">
+                            <!-- Top performers will be inserted here -->
+                        </div>
+                    </div>
+
+                    <div class="chart-container">
+                        <h3 class="text-lg font-semibold mb-4 text-gray-700">
+                            <i class="fas fa-tags text-blue-500 mr-2"></i>
+                            Brand Distribution
+                        </h3>
+                        <div id="brandDistribution" class="space-y-3">
+                            <!-- Brand distribution will be inserted here -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white mt-12">
+        <div class="container mx-auto px-4 py-6">
+            <div class="text-center">
+                <p class="text-sm opacity-75">
+                    <i class="fas fa-chart-line text-blue-400 mx-1"></i>
+                    Analytics Dashboard - Laptop Recommendation System
+                </p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Global variables
+        let analyticsData = {};
+        let chartsData = {};
+
+        // Initialize the dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            createFlowerPetals();
+            loadAnalyticsData();
+        });
+
+        // Create falling flower petals
+        function createFlowerPetals() {
+            const container = document.getElementById('petalsContainer');
+            const petalCount = 15; // Number of petals falling at once
+            
+            for (let i = 0; i < petalCount; i++) {
+                createPetal(container, i);
+            }
+        }
+
+        function createPetal(container, index) {
+            const petal = document.createElement('div');
+            petal.className = 'petal';
+            
+            // Random properties for each petal
+            const fallDuration = Math.random() * 10 + 10; // 10-20 seconds
+            const swayDuration = Math.random() * 3 + 2; // 2-5 seconds
+            const delay = Math.random() * 5; // 0-5 seconds delay
+            const startPosition = Math.random() * 100; // 0-100% from left
+            
+            // Set CSS variables for animation
+            petal.style.setProperty('--fall-duration', `${fallDuration}s`);
+            petal.style.setProperty('--sway-duration', `${swayDuration}s`);
+            petal.style.left = `${startPosition}%`;
+            petal.style.animationDelay = `${delay}s`;
+            
+            container.appendChild(petal);
+            
+            // Remove petal after animation completes and create a new one
+            setTimeout(() => {
+                petal.remove();
+                createPetal(container, index);
+            }, (fallDuration + delay) * 1000);
+        }
+
+        // Load analytics data
+        async function loadAnalyticsData() {
+            try {
+                // Load summary data
+                const summaryResponse = await fetch('/api/analytics/summary');
+                analyticsData = await summaryResponse.json();
+
+                // Load charts data
+                const chartsResponse = await fetch('/api/analytics/charts');
+                chartsData = await chartsResponse.json();
+
+                // Display all data
+                displaySummaryCards();
+                displaySalesCards();
+                loadCharts();
+                displayDetailedStats();
+
+                // Show content and hide loading
+                document.getElementById('loadingState').classList.add('hidden');
+                document.getElementById('analyticsContent').classList.remove('hidden');
+
+            } catch (error) {
+                console.error('Error loading analytics:', error);
+                showError('Failed to load analytics data');
+            }
+        }
+
+        // Display summary cards
+        function displaySummaryCards() {
+            const container = document.getElementById('summaryCards');
+            
+            const cards = [
+                {
+                    title: 'Total Laptops',
+                    value: analyticsData.total_laptops,
+                    icon: 'fa-laptop',
+                    color: 'blue'
+                },
+                {
+                    title: 'Brands Available',
+                    value: analyticsData.brands,
+                    icon: 'fa-industry',
+                    color: 'green'
+                },
+                {
+                    title: 'Average Price',
+                    value: `$${Math.round(analyticsData.avg_price).toLocaleString()}`,
+                    icon: 'fa-dollar-sign',
+                    color: 'yellow'
+                },
+                {
+                    title: 'Avg Performance',
+                    value: `${Math.round(analyticsData.avg_performance)}/100`,
+                    icon: 'fa-tachometer-alt',
+                    color: 'purple'
+                }
+            ];
+
+            container.innerHTML = cards.map(card => `
+                <div class="stat-card bg-white rounded-lg shadow-md p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-600">${card.title}</p>
+                            <p class="text-2xl font-bold text-gray-900">${card.value}</p>
+                        </div>
+                        <div class="bg-${card.color}-100 rounded-full p-3">
+                            <i class="fas ${card.icon} text-${card.color}-600 text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Display sales cards
+        function displaySalesCards() {
+            const container = document.getElementById('salesCards');
+            const salesData = analyticsData.sales_summary;
+            
+            const cards = [
+                {
+                    title: 'Total Sales',
+                    value: salesData.total_sales.toLocaleString(),
+                    icon: 'fa-shopping-cart',
+                    color: 'green'
+                },
+                {
+                    title: 'Total Revenue',
+                    value: `$${salesData.total_revenue.toLocaleString()}`,
+                    icon: 'fa-dollar-sign',
+                    color: 'blue'
+                },
+                {
+                    title: 'Best Month',
+                    value: salesData.best_selling_month,
+                    icon: 'fa-calendar',
+                    color: 'purple'
+                },
+                {
+                    title: 'Growth Rate',
+                    value: salesData.growth_rate,
+                    icon: 'fa-chart-line',
+                    color: 'orange'
+                }
+            ];
+
+            container.innerHTML = cards.map(card => `
+                <div class="stat-card bg-white rounded-lg shadow-md p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-600">${card.title}</p>
+                            <p class="text-2xl font-bold text-gray-900">${card.value}</p>
+                        </div>
+                        <div class="bg-${card.color}-100 rounded-full p-3">
+                            <i class="fas ${card.icon} text-${card.color}-600 text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Load all charts
+        function loadCharts() {
+            // Load each chart into its container
+            loadChartIntoContainer('salesTrend', chartsData.sales_trend);
+            loadChartIntoContainer('brandSalesComparison', chartsData.brand_sales_comparison);
+            loadChartIntoContainer('useCaseSalesTrend', chartsData.use_case_sales_trend);
+            loadChartIntoContainer('priceSegmentSales', chartsData.price_segment_sales);
+            loadChartIntoContainer('performanceRadar', chartsData.performance_radar);
+            loadChartIntoContainer('priceDistribution', chartsData.price_distribution);
+            loadChartIntoContainer('performanceVsPrice', chartsData.performance_vs_price);
+            loadChartIntoContainer('useCaseDistribution', chartsData.use_case_distribution);
+            loadChartIntoContainer('brandComparison', chartsData.brand_comparison);
+            loadChartIntoContainer('specificationHeatmap', chartsData.specification_heatmap);
+            loadChartIntoContainer('marketSegmentAnalysis', chartsData.market_segment_analysis);
+        }
+
+        // Load chart into container using iframe
+        function loadChartIntoContainer(containerId, chartPath) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = `
+                <iframe src="/${chartPath}" 
+                        style="width: 100%; height: 100%; border: none; border-radius: 8px;"
+                        frameborder="0">
+                </iframe>
+            `;
+        }
+
+        // Display detailed statistics
+        function displayDetailedStats() {
+            // Top performers
+            const topPerformersContainer = document.getElementById('topPerformers');
+            topPerformersContainer.innerHTML = `
+                <div class="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
+                    <div class="flex items-center space-x-3">
+                        <i class="fas fa-trophy text-yellow-500 text-xl"></i>
+                        <div>
+                            <p class="font-medium text-gray-800">Best Performance</p>
+                            <p class="text-sm text-gray-600">${analyticsData.top_performer}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                    <div class="flex items-center space-x-3">
+                        <i class="fas fa-feather text-green-500 text-xl"></i>
+                        <div>
+                            <p class="font-medium text-gray-800">Most Portable</p>
+                            <p class="text-sm text-gray-600">${analyticsData.most_portable}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                    <div class="flex items-center space-x-3">
+                        <i class="fas fa-dollar-sign text-blue-500 text-xl"></i>
+                        <div>
+                            <p class="font-medium text-gray-800">Best Value</p>
+                            <p class="text-sm text-gray-600">${analyticsData.best_value}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex items-center justify-between p-3 bg-purple-50 rounded-lg">
+                    <div class="flex items-center space-x-3">
+                        <i class="fas fa-chart-line text-purple-500 text-xl"></i>
+                        <div>
+                            <p class="font-medium text-gray-800">Price Range</p>
+                            <p class="text-sm text-gray-600">$${analyticsData.price_range.min.toLocaleString()} - $${analyticsData.price_range.max.toLocaleString()}</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Brand distribution
+            const brandContainer = document.getElementById('brandDistribution');
+            const brands = Object.entries(analyticsData.brand_distribution);
+            
+            brandContainer.innerHTML = brands.map(([brand, count]) => `
+                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div class="flex items-center space-x-3">
+                        <div class="bg-blue-100 rounded-full p-2">
+                            <i class="fas fa-industry text-blue-600 text-sm"></i>
+                        </div>
+                        <div>
+                            <p class="font-medium text-gray-800">${brand}</p>
+                            <p class="text-sm text-gray-600">${count} model${count > 1 ? 's' : ''}</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-lg font-bold text-gray-900">${count}</p>
+                        <p class="text-xs text-gray-500">${((count / analyticsData.total_laptops) * 100).toFixed(1)}%</p>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Show error message
+        function showError(message) {
+            const loadingState = document.getElementById('loadingState');
+            loadingState.innerHTML = `
+                <div class="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md">
+                    <div class="flex items-center">
+                        <i class="fas fa-exclamation-triangle text-red-500 text-xl mr-3"></i>
+                        <div>
+                            <h3 class="text-lg font-semibold text-red-800">Error</h3>
+                            <p class="text-red-600">${message}</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>
